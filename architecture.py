@@ -60,7 +60,7 @@ from torch.utils.data import DataLoader, TensorDataset
 noise_range = [0.1, 1.0]
 signal_range = [1.0, 2.0]
 
-def CNN_denoise(encoder, classifier, conf_out, train_loader, test_loader, criterion_class, criterion_conf, optimizer, device):
+def CNN_denoise(encoder, classifier, conf_out, train_loader, val_loader, test_loader, criterion_class, criterion_conf, optimizer, device):
     encoder.train()
     classifier.train()
     conf_out.train()
@@ -70,6 +70,7 @@ def CNN_denoise(encoder, classifier, conf_out, train_loader, test_loader, criter
     best_acc = 0.0            # Best accuracy for the model with min loss
     best_conf = 0.0           # Best confidence for the model with min loss
 
+    # Training loop
     for batch_images, batch_labels in train_loader:
         batch_images, batch_labels = batch_images.to(device), batch_labels.to(device)
         
@@ -123,118 +124,113 @@ def CNN_denoise(encoder, classifier, conf_out, train_loader, test_loader, criter
                 'classifier': classifier.state_dict(),
                 'conf_out': conf_out.state_dict()
             }
-			
-    # Evaluate the entire training set with the best model
-    encoder.load_state_dict(best_model['encoder'])
-    classifier.load_state_dict(best_model['classifier'])
-    conf_out.load_state_dict(best_model['conf_out'])
-	
+    
+    # Validation part
     encoder.eval()
     classifier.eval()
     conf_out.eval()
-	
+    
     best_z = []
     best_conv_flat = []
-    signal = 1 # No signal (default)
-    noise = 0.0 # No noise (default)
     accs = []
     confs = []
     
-    with torch.no_grad():  # No need to calculate gradients during evaluation
-        for batch_images, batch_labels in train_loader:
-            batch_images = batch_images.to(device)
+    with torch.no_grad():
+        for batch_images, batch_labels in val_loader:
+            batch_images, batch_labels = batch_images.to(device), batch_labels.to(device)
             
             # Scale signal
-            batch_images = batch_images * signal
+            batch_images = batch_images * 1  # No signal during validation
             # Scale to [-1, 1]
             batch_images = (batch_images - 0.5) / 0.5
             # Add noise
-            batch_images = batch_images + (torch.randn(batch_images.shape) * noise).to(device)
+            batch_images = batch_images + (torch.randn(batch_images.shape) * 0.0).to(device)  # No noise during validation
             # Threshold image
             batch_images = nn.Hardtanh()(batch_images)
 
             # Forward pass through the best model
             z, conv_flat = encoder(batch_images, device)
-			
-            # Obtain the train acc and conf
             class_preds = classifier(z)
             conf_preds = conf_out(z)
             avg_conf = conf_preds.mean().item()
-            _, predicted = torch.max(class_preds, 1) 
+
+            # Accuracy calculation
+            _, predicted = torch.max(class_preds, 1)
             correct = (predicted == batch_labels).sum().item()
             total = batch_labels.size(0)
-            acc = correct / total  
-			
+            acc = correct / total
+            
             accs.append(acc)
             confs.append(avg_conf)
-			
+
             # Collect latent vectors
             best_z.append(z.detach().cpu())
             best_conv_flat.append(conv_flat.detach().cpu())
-			
+
+    # Final train set evaluation
     train_acc = np.mean(accs)
-    train_conf = np.mean(confs)    
-	
-    # Concatenate all latent vectors
+    train_conf = np.mean(confs)
+    
     best_z = torch.cat(best_z, dim=0)
     best_conv_flat = torch.cat(best_conv_flat, dim=0)
-	
-    # Now, evaluate the test set
+
+    # Test set evaluation
     test_z = []
     test_conv_flat = []
     test_accs = []
     test_confs = []
-    
-    with torch.no_grad():  # No gradients during evaluation
+
+    with torch.no_grad():
         for batch_images, batch_labels in test_loader:
-            batch_images = batch_images.to(device)
+            batch_images, batch_labels = batch_images.to(device), batch_labels.to(device)
             
             # Scale signal
-            batch_images = batch_images * signal
+            batch_images = batch_images * 1  # No signal during testing
             # Scale to [-1, 1]
             batch_images = (batch_images - 0.5) / 0.5
             # Add noise (if desired, currently 0.0)
-            batch_images = batch_images + (torch.randn(batch_images.shape) * noise).to(device)
+            batch_images = batch_images + (torch.randn(batch_images.shape) * 0.0).to(device)  # No noise during testing
             # Threshold image
             batch_images = nn.Hardtanh()(batch_images)
 
-            # Forward pass through the best model
+            # Forward pass
             z, conv_flat = encoder(batch_images, device)
-			
-            # Obtain the test acc and conf
             class_preds = classifier(z)
             conf_preds = conf_out(z)
             avg_conf = conf_preds.mean().item()
+
+            # Accuracy calculation
             _, predicted = torch.max(class_preds, 1)
             correct = (predicted == batch_labels).sum().item()
-            total = batch_labels.size(0)    
+            total = batch_labels.size(0)
             acc = correct / total
-            
+
             test_accs.append(acc)
             test_confs.append(avg_conf)
 
             # Collect latent vectors
             test_z.append(z.detach().cpu())
             test_conv_flat.append(conv_flat.detach().cpu())
-    
+
     test_acc = np.mean(test_accs)
     test_conf = np.mean(test_confs)
-    # Concatenate all latent vectors for test set
+
     test_z = torch.cat(test_z, dim=0)
     test_conv_flat = torch.cat(test_conv_flat, dim=0)
-	
-    # collect stats, round to 4 decimal places
+
+    # Collect stats
     stats = {
         'train_acc': np.round(train_acc, 4),
         'train_conf': np.round(train_conf, 4),
         'test_acc': np.round(test_acc, 4),
         'test_conf': np.round(test_conf, 4),
-		'best_loss': np.round(best_loss, 4),
-		'best_acc': np.round(best_acc, 4),
-		'best_conf': np.round(best_conf, 4)
+        'best_loss': np.round(best_loss, 4),
+        'best_acc': np.round(best_acc, 4),
+        'best_conf': np.round(best_conf, 4)
     }
 
     return best_model, best_z, best_conv_flat, test_z, test_conv_flat, stats
+
 
 def PCA_reduction(train_images, test_images, latent_dim, random_seed):
     # Flatten train and test images for PCA (batch_size, 1, 28, 28) -> (batch_size, 28*28)
