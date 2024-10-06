@@ -66,6 +66,4 @@ def load_n_images(n_of_images, random_state=42, test_size=0.25):
 
     # use the last 20% of the data for testing, and the first 80% for training
     train_images, test_images, train_labels, test_labels = train_test_split(sample_images, sample_labels, test_size=test_size, random_state=random_state)    
-    # for train_images, train_labels, split the data into 75% training and 25% validation
-    train_images, val_images, train_labels, val_labels = train_test_split(train_images, train_labels, test_size=0.25, random_state=random_state)
-    return train_images, train_labels, test_images, test_labels, val_images, val_labels
+    return train_images, train_labels, test_images, test_labels
