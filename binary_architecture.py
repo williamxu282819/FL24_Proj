@@ -57,10 +57,10 @@ class Conf_out(nn.Module):
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 
-# noise_range = [0.1, 1.0]
-# signal_range = [1.0, 2.0]
-noise_range = [0.0, 0.0]
-signal_range = [0.1, 1.0]
+noise_range = [0.1, 1.0]
+signal_range = [1.0, 2.0]
+# noise_range = [0.0, 0.0]
+# signal_range = [1.0, 1.0]
 
 def CNN_denoise(encoder, classifier, conf_out, train_loader, test_loader, criterion_class, criterion_conf, optimizer, device):
     encoder.train()
