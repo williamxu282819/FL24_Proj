@@ -60,7 +60,7 @@ from torch.utils.data import DataLoader, TensorDataset
 # noise_range = [0.1, 1.0]
 # signal_range = [1.0, 2.0]
 noise_range = [0.0, 0.0]
-signal_range = [1.0, 1.0]
+signal_range = [0.1, 1.0]
 
 def CNN_denoise(encoder, classifier, conf_out, train_loader, test_loader, criterion_class, criterion_conf, optimizer, device):
     encoder.train()
@@ -172,7 +172,7 @@ def CNN_denoise(encoder, classifier, conf_out, train_loader, test_loader, criter
 
     test_acc = np.mean(test_accs)
     test_conf = np.mean(test_confs)
-
+	
     test_z = torch.cat(test_z, dim=0)
     test_conv_flat = torch.cat(test_conv_flat, dim=0)
 
