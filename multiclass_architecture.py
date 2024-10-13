@@ -32,7 +32,7 @@ class Encoder(nn.Module):
 		fc1_out = self.leaky_relu(self.fc1_BN(self.fc1(conv3_out_flat)))
 		fc2_out = self.leaky_relu(self.fc2_BN(self.fc2(fc1_out)))
 		z = self.z_out(fc2_out)
-		return z
+		return z, conv3_out_flat
 
 class Class_out(nn.Module):
 	def __init__(self, args):

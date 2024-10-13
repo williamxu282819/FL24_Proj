@@ -25,10 +25,6 @@ def CNN_denoise(encoder, classifier, conf_out, train_loader, test_loader, criter
     # Training loop
     for batch_images, batch_labels in train_loader:
         batch_images, batch_labels = batch_images.to(device), batch_labels.to(device)
-        
-        # Zero the gradients
-        optimizer.zero_grad()
-
         # Scale signal
         signal = ((torch.rand(batch_images.shape[0]) * (signal_range[1] - signal_range[0])) + signal_range[0]).to(device)
         batch_images = batch_images * signal.view(-1, 1, 1, 1)
@@ -44,6 +40,8 @@ def CNN_denoise(encoder, classifier, conf_out, train_loader, test_loader, criter
         
         # Threshold image
         batch_images = nn.Hardtanh()(batch_images)
+        # Zero the gradients
+        optimizer.zero_grad()
 
         # Forward pass
         z, conv_flat = encoder(batch_images, device)
