@@ -84,6 +84,7 @@ def CNN_denoise(encoder, classifier, conf_out, train_loader, test_loader, criter
     test_conv_flat = []
     test_accs = []
     test_confs = []
+    predicted_labels = []
 
     with torch.no_grad():
         for batch_images, batch_labels in test_loader:
@@ -117,6 +118,9 @@ def CNN_denoise(encoder, classifier, conf_out, train_loader, test_loader, criter
             test_z.append(z.detach().cpu())
             test_conv_flat.append(conv_flat.detach().cpu())
 
+            # Collect predicted labels
+            predicted_labels.append(predicted)
+            
     test_acc = np.mean(test_accs)
     test_conf = np.mean(test_confs)
 	
@@ -132,7 +136,7 @@ def CNN_denoise(encoder, classifier, conf_out, train_loader, test_loader, criter
         'best_conf': np.round(best_conf, 4)
     }
 
-    return best_model, test_z, test_conv_flat, stats
+    return best_model, test_z, test_conv_flat, stats, predicted_labels
 
 
 def PCA_reduction(train_images, test_images, latent_dim, random_seed):
