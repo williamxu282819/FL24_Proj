@@ -28,42 +28,29 @@ def load_labels(filename):
     return labels
 
 def preprocess_images(images):
-    # Normalize pixel values to [0, 1] range
     images = images.astype(np.float32) / 255.0
-    # Expand dimensions to [number of images, rows, cols, channels]
     images = np.expand_dims(images, axis=-1)
     return images
 
 def load_n_images(n_of_images, random_state=42, test_size=0.25):
 
     directory = './MNIST/'
-    train_image_directory = directory + 'train-images.idx3-ubyte'
-    train_label_directory = directory + 'train-labels.idx1-ubyte'
-    # test_image_directory = directory + 't10k-images.idx3-ubyte'
-    # test_label_directory = directory + 't10k-labels.idx1-ubyte'
-    # does the file exist?
-    if not os.path.exists(train_image_directory):
-        print('File not found: ' + train_image_directory)
-    if not os.path.exists(train_label_directory):
-        print('File not found: ' + train_label_directory)
+    image_directory = directory + 'train-images.idx3-ubyte'
+    label_directory = directory + 'train-labels.idx1-ubyte'
+    if not os.path.exists(image_directory):
+        print('File not found: ' + image_directory)
+    if not os.path.exists(label_directory):
+        print('File not found: ' + label_directory)
+    
+    images = load_images(image_directory)
+    labels = load_labels(label_directory)
 
-    # if not os.path.exists(test_image_directory):
-    #     print('File not found: ' + test_image_directory)
-
-    # if not os.path.exists(test_label_directory):
-    #     print('File not found: ' + test_label_directory)
-
-    images = load_images(train_image_directory)
-    labels = load_labels(train_label_directory)
-    # test_images = load_images(test_image_directory)
-    # test_labels = load_labels(test_label_directory)
-    # train_images = preprocess_images(train_images)
-    # test_images = preprocess_images(test_images)
-
-    # randomly sample 1200 images from my dataset
-    sample_images = images[:n_of_images]
-    sample_labels = labels[:n_of_images]
+    # Create an array of indices for tracking
+    indices = np.arange(len(images))
+    sampled_indices = indices[:n_of_images]
+    sample_images = images[sampled_indices]
+    sample_labels = labels[sampled_indices]
 
     # use the last 20% of the data for testing, and the first 80% for training
-    train_images, test_images, train_labels, test_labels = train_test_split(sample_images, sample_labels, test_size=test_size, random_state=random_state)    
-    return train_images, train_labels, test_images, test_labels
+    images, test_images, labels, test_labels, indices, test_indices = train_test_split(sample_images, sample_labels, sampled_indices, test_size=test_size, random_state=random_state)    
+    return images, labels, indices, test_images, test_labels, test_indices
